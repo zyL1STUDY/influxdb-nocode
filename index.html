@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ATSYS InfluxDB No-Code Platform — Product Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --sky: #0ea5e9; --sky-dark: #0284c7; --sky-light: #e0f2fe; --sky-mid: #bae6fd;
+  --ink: #0f172a; --ink-mid: #334155; --ink-muted: #64748b; --ink-faint: #94a3b8;
+  --surface: #f8fafc; --white: #ffffff; --border: #e2e8f0; --border-light: #f1f5f9;
+  --green: #10b981; --orange: #f59e0b; --purple: #8b5cf6; --red: #ef4444;
+  --ai: #6d28d9; --ai-light: #f5f3ff; --ai-mid: #c4b5fd;
+  --sidebar-w: 300px; --topbar-h: 56px;
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08); --shadow-md: 0 4px 16px rgba(0,0,0,.10); --shadow-lg: 0 16px 48px rgba(0,0,0,.16);
+}
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; background: var(--surface); color: var(--ink); }
+
+/* TOPBAR */
+.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; gap: 16px; }
+.topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-accent { width: 3px; height: 20px; background: linear-gradient(180deg, var(--sky), var(--purple)); border-radius: 2px; }
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.topbar-badge { font-size: 11px; padding: 2px 8px; background: var(--sky-light); color: var(--sky-dark); border-radius: 99px; font-weight: 500; }
+
+/* MODE SWITCHER */
+.mode-switcher { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
+.mode-btn { padding: 5px 14px; border-radius: 6px; border: none; background: transparent; font-size: 12px; font-weight: 500; color: var(--ink-muted); cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.mode-btn.active { background: var(--white); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.mode-btn.ai-btn.active { background: var(--ai); color: white; }
+.mode-dot { width: 6px; height: 6px; border-radius: 50%; }
+.classic-dot { background: var(--sky); }
+.ai-dot { background: var(--ai-mid); }
+.mode-btn.ai-btn.active .ai-dot { background: rgba(255,255,255,.6); }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn-login { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-sm); background: var(--sky-light); color: var(--sky-dark); border: 1px solid var(--sky-mid); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+.btn-login:hover { background: var(--sky-mid); }
+.user-chip { display: none; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; color: var(--ink-mid); }
+.user-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--sky), var(--purple)); color: white; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+
+/* LAYOUT */
+.app { display: flex; height: 100vh; padding-top: var(--topbar-h); }
+
+/* SIDEBAR */
+.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: border-color .3s; }
+.sidebar.ai-mode { border-right-color: var(--ai-mid); }
+.sidebar-head { padding: 12px 16px 10px; border-bottom: 1px solid var(--border-light); font-size: 11px; font-weight: 600; color: var(--ink-faint); letter-spacing: .06em; text-transform: uppercase; }
+.sidebar-body { flex: 1; overflow-y: auto; padding: 14px; min-height: 0; }
+.sidebar-body::-webkit-scrollbar { width: 4px; }
+.sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.field-group { margin-bottom: 14px; }
+.field-label { font-size: 11px; font-weight: 500; color: var(--ink-muted); margin-bottom: 5px; }
+.field-select { width: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font-size: 13px; color: var(--ink); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 8px center; background-repeat: no-repeat; background-size: 16px; padding-right: 30px; cursor: pointer; transition: border-color .15s; }
+.field-select:focus { outline: none; border-color: var(--sky); }
+.field-select:disabled { opacity: .45; cursor: not-allowed; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.tag-zone { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 10px; min-height: 64px; margin-bottom: 14px; transition: border-color .2s; }
+.tag-zone-label { margin-bottom: 6px; font-size: 11px; font-weight: 500; color: var(--ink-muted); }
+.tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; margin: 2px; }
+.tag-pill-remove { cursor: pointer; opacity: .6; }
+.tag-pill-remove:hover { opacity: 1; }
+
+.sidebar-footer { padding: 14px; border-top: 1px solid var(--border-light); flex-shrink: 0; }
+.btn-run { width: 100%; padding: 10px; border-radius: var(--radius-sm); background: var(--ink); color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
+.btn-run:hover { background: var(--sky-dark); }
+.btn-run:disabled { opacity: .4; cursor: not-allowed; }
+.btn-run .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* DATA TREE */
+.tree-node { margin-bottom: 4px; }
+.tree-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); cursor: grab; transition: all .12s; user-select: none; }
+.tree-row:hover { border-color: var(--sky-mid); background: var(--sky-light); }
+.tree-row.dragging { opacity: .5; border-color: var(--sky); }
+.tree-toggle { width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink-faint); font-size: 10px; flex-shrink: 0; }
+.tree-icon { font-size: 12px; flex-shrink: 0; }
+.tree-label { font-size: 12px; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-type { font-size: 10px; padding: 1px 6px; border-radius: 99px; font-weight: 500; flex-shrink: 0; }
+.type-bucket { background: #dbeafe; color: #1d4ed8; }
+.type-measurement { background: #d1fae5; color: #065f46; }
+.type-field { background: #fef3c7; color: #92400e; }
+.type-tag { background: #ede9fe; color: #5b21b6; }
+.tree-children { margin-left: 16px; margin-top: 4px; display: none; }
+.tree-children.open { display: block; }
+
+/* TAG ZONE DRAG OVER */
+.tag-zone.drag-over { border-color: var(--sky); background: var(--sky-light); }
+
+/* AI SIDEBAR */
+.ai-panel { display: none; flex-direction: column; height: 100%; }
+.ai-panel.active { display: flex; }
+.classic-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.classic-panel.hidden { display: none; }
+
+.ai-input-area { padding: 14px; border-bottom: 1px solid var(--border-light); }
+.ai-input-label { font-size: 11px; font-weight: 600; color: var(--ai); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+.ai-textarea { width: 100%; border: 1.5px solid var(--ai-mid); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--ink); resize: none; height: 88px; font-family: inherit; transition: border-color .15s; background: var(--ai-light); }
+.ai-textarea:focus { outline: none; border-color: var(--ai); background: white; }
+.ai-textarea::placeholder { color: var(--ink-faint); }
+.btn-ai-run { width: 100%; padding: 9px; margin-top: 8px; border-radius: var(--radius-sm); background: var(--ai); color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s; }
+.btn-ai-run:hover { background: #6d28d9; }
+.btn-ai-run:disabled { opacity: .4; cursor: not-allowed; }
+.btn-ai-run .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; }
+
+.quick-prompts { padding: 12px 14px; border-bottom: 1px solid var(--border-light); }
+.quick-label { font-size: 11px; color: var(--ink-faint); margin-bottom: 8px; }
+.quick-btn { display: block; width: 100%; text-align: left; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); font-size: 12px; color: var(--ink-mid); cursor: pointer; margin-bottom: 5px; transition: all .12s; line-height: 1.4; }
+.quick-btn:hover { border-color: var(--ai-mid); background: var(--ai-light); color: var(--ai); }
+
+.ai-parse-result { padding: 12px 14px; flex: 1; overflow-y: auto; }
+.parse-card { background: var(--ai-light); border: 1px solid var(--ai-mid); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; display: none; }
+.parse-card.show { display: block; }
+.parse-title { font-size: 11px; font-weight: 600; color: var(--ai); margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+.parse-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; }
+.parse-key { color: var(--ink-muted); }
+.parse-val { color: var(--ai); font-weight: 500; background: white; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--ai-mid); }
+
+.flux-preview { background: #0f172a; border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; display: none; }
+.flux-preview.show { display: block; }
+.flux-preview-title { font-size: 11px; font-weight: 500; color: #94a3b8; margin-bottom: 6px; letter-spacing: .05em; text-transform: uppercase; }
+.flux-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: #7dd3fc; line-height: 1.7; white-space: pre; overflow-x: auto; }
+
+/* WORKBENCH */
+.workbench { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.condition-bar { padding: 10px 16px; background: var(--white); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 44px; }
+.condition-label { font-size: 11px; color: var(--ink-faint); }
+.cond-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+.cond-bucket { background: #dbeafe; color: #1d4ed8; }
+.cond-time { background: #d1fae5; color: #065f46; }
+.cond-field { background: #fef3c7; color: #92400e; }
+.cond-fn { background: #ede9fe; color: #5b21b6; }
+.cond-ai { background: var(--ai-light); color: var(--ai); }
+
+.chart-area { flex: 1; overflow-y: auto; padding: 16px; }
+.chart-area::-webkit-scrollbar { width: 4px; }
+.chart-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.empty-state { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink-faint); text-align: center; padding: 40px; }
+.empty-icon { font-size: 40px; opacity: .4; }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--ink-muted); }
+.empty-sub { font-size: 13px; max-width: 300px; line-height: 1.6; }
+.empty-ai-hint { margin-top: 8px; font-size: 12px; color: var(--ai); background: var(--ai-light); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--ai-mid); }
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chart-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.chart-card.full { grid-column: 1 / -1; }
+.chart-header { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chart-title { font-size: 12px; font-weight: 600; color: var(--ink-mid); }
+.chart-meta { font-size: 11px; color: var(--ink-faint); }
+.chart-type-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.chart-type-btn { padding: 3px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--ink-muted); cursor: pointer; transition: all .12s; }
+.chart-type-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
+.chart-body { padding: 12px; position: relative; height: 200px; }
+.chart-body.tall { height: 260px; }
+.chart-footer { padding: 6px 14px; border-top: 1px solid var(--border-light); font-size: 11px; color: var(--ink-faint); display: flex; justify-content: space-between; }
+
+/* AI badge on chart */
+.ai-generated-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; background: var(--ai-light); color: var(--ai); border-radius: 99px; border: 1px solid var(--ai-mid); }
+
+/* STATUSBAR */
+.statusbar { height: 28px; background: var(--white); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11px; color: var(--ink-faint); flex-shrink: 0; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); display: inline-block; margin-right: 5px; }
+.status-dot.green { background: var(--green); }
+.status-dot.purple { background: var(--ai); }
+
+/* LOGIN MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 16px; padding: 32px 28px; width: 360px; box-shadow: var(--shadow-lg); animation: modalIn .2s ease; }
+@keyframes modalIn { from { opacity:0; transform: scale(.95) translateY(8px); } to { opacity:1; transform: none; } }
+.modal-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.modal-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sky); }
+.modal-logo-text { font-size: 14px; font-weight: 600; color: var(--ink); }
+.modal-sub { font-size: 12px; color: var(--ink-muted); margin-bottom: 22px; line-height: 1.6; }
+.modal-sub span { color: var(--sky-dark); font-weight: 500; }
+.modal-field { margin-bottom: 14px; }
+.modal-field label { display: block; font-size: 12px; font-weight: 500; color: var(--ink-mid); margin-bottom: 5px; }
+.modal-field input { width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; color: var(--ink); transition: border-color .15s; background: var(--surface); }
+.modal-field input:focus { outline: none; border-color: var(--sky); background: white; }
+.modal-field input::placeholder { color: var(--ink-faint); }
+.btn-modal-login { width: 100%; padding: 11px; border-radius: var(--radius-sm); background: var(--ink); color: white; border: none; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 6px; transition: background .15s; }
+.btn-modal-login:hover { background: var(--sky-dark); }
+.modal-hint { font-size: 11px; color: var(--ink-faint); text-align: center; margin-top: 14px; line-height: 1.6; }
+
+/* NOTIF */
+.notif { position: fixed; top: 70px; right: 20px; z-index: 300; background: var(--ink); color: white; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; box-shadow: var(--shadow-md); display: none; align-items: center; gap: 8px; animation: slideIn .2s ease; }
+@keyframes slideIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: none; } }
+.notif.show { display: flex; }
+
+/* UPGRADE BANNER */
+.upgrade-banner { background: linear-gradient(135deg, #ede9fe, #dbeafe); border: 1px solid var(--ai-mid); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--ai); line-height: 1.6; display: none; }
+.upgrade-banner.show { display: block; }
+.upgrade-banner strong { display: block; margin-bottom: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-accent"></div>
+    <span class="topbar-title">InfluxDB Query Builder（查询构建）</span>
+    <span class="topbar-badge">Portfolio Demo</span>
+  </div>
+
+  <div class="mode-switcher">
+    <button class="mode-btn active" id="classicBtn" onclick="switchMode('classic')">
+      <span class="mode-dot classic-dot"></span> 传统模式
+    </button>
+    <button class="mode-btn ai-btn" id="aiBtn" onclick="switchMode('ai')">
+      <span class="mode-dot ai-dot"></span> AI 模式（升级方向）
+    </button>
+  </div>
+
+  <div class="topbar-right">
+    <button class="btn-login" id="loginBtn" onclick="openLogin()">Login（登录）</button>
+    <div class="user-chip" id="userChip">
+      <div class="user-avatar" id="userAvatar">Z</div>
+      <span id="userName">Ziyu</span>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- CLASSIC PANEL -->
+    <div class="classic-panel" id="classicPanel">
+      <div class="sidebar-head">Query Builder（查询构建）</div>
+      <div class="sidebar-body">
+        <div class="upgrade-banner" id="upgradeBanner">
+          <strong>AI Mode Upgrade（AI 模式升级点）</strong>
+          以下手动步骤在 AI 模式中可通过自然语言一句话完成。All manual steps below can be done with one sentence in AI mode.
+        </div>
+        <div class="field-group">
+          <div class="field-label">Bucket（数据源）</div>
+          <select class="field-select" id="sel-bucket" onchange="onBucketChange()" disabled>
+            <option value="">Select bucket...（选择数据源）</option>
+            <option value="factory_sensors">factory_sensors（工厂传感器）</option>
+            <option value="energy_monitor">energy_monitor（能耗监控）</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Measurement（测量表）</div>
+          <select class="field-select" id="sel-measurement" onchange="onMeasurementChange()" disabled>
+            <option value="">Select measurement...（选择测量表）</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Field（字段）</div>
+          <select class="field-select" id="sel-field" disabled>
+            <option value="">Select field...（选择字段）</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Time Range（时间范围）</div>
+          <select class="field-select" id="sel-range" disabled>
+            <option value="-1h">Last 1 hour（过去1小时）</option>
+            <option value="-6h">Last 6 hours（过去6小时）</option>
+            <option value="-24h" selected>Last 24 hours（过去24小时）</option>
+            <option value="-7d">Last 7 days（过去7天）</option>
+            <option value="-30d">Last 30 days（过去30天）</option>
+          </select>
+        </div>
+        <div class="row2" style="margin-bottom:14px">
+          <div class="field-group" style="margin:0">
+            <div class="field-label">Aggregate fn（聚合函数）</div>
+            <select class="field-select" id="sel-fn" disabled>
+              <option value="mean">mean</option>
+              <option value="max">max</option>
+              <option value="min">min</option>
+              <option value="sum">sum</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin:0">
+            <div class="field-label">Window（时间窗口）</div>
+            <select class="field-select" id="sel-window" disabled>
+              <option value="1m">1m</option>
+              <option value="5m" selected>5m</option>
+              <option value="15m">15m</option>
+              <option value="1h">1h</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-label" style="margin-bottom:6px">Tag Filters（标签过滤）</div>
+        <div class="tag-zone" id="tagZone">
+          <div id="tagPills">
+            <span class="tag-pill" style="background:#ede9fe;color:#5b21b6">device = machine_01 <span class="tag-pill-remove" onclick="removeTag(this)">×</span></span>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;border-top:1px solid var(--border-light);padding-top:12px">
+          <div class="field-label" style="margin-bottom:5px">Data Tree（数据树）
+            <span style="font-size:10px;color:var(--ink-faint);font-weight:400;margin-left:4px">↑ 拖拽节点至上方过滤区</span>
+          </div>
+          <div style="font-size:11px;color:var(--ai);margin-bottom:8px;line-height:1.5;background:var(--ai-light);padding:6px 10px;border-radius:6px;border:1px solid var(--ai-mid)">
+            浏览数据结构，将字段或标签拖入上方过滤区——与下拉选择配合使用，快速添加过滤条件
+          </div>
+          <div id="dataTree" style="max-height:180px;overflow-y:auto;padding-right:4px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-run" id="btnRun" onclick="runQuery()" disabled>
+        <span class="spinner" id="spinner"></span>
+        <span id="btnLabel">Run Query（执行查询）</span>
+      </button>
+    </div>
+
+    <!-- AI PANEL -->
+    <div class="ai-panel" id="aiPanel">
+      <div class="sidebar-head" style="color:var(--ai)">AI Natural Language Query（自然语言查询）</div>
+      <div class="ai-input-area">
+        <div class="ai-input-label">描述你想要的数据 Describe your query</div>
+        <textarea class="ai-textarea" id="aiInput" placeholder="例如：查看过去 24 小时 sensor_data 里 temperature 的平均值，用折线图展示" disabled></textarea>
+        <button class="btn-ai-run" id="btnAiRun" onclick="runAiQuery()" disabled>
+          <span class="spinner" id="aiSpinner"></span>
+          <span id="aiBtn2Label">Generate & Run（生成并执行）</span>
+        </button>
+      </div>
+
+      <div class="quick-prompts" id="quickPrompts">
+        <div class="quick-label">Quick examples（快速示例，点击填入）</div>
+        <button class="quick-btn" onclick="fillPrompt(this)">过去 24 小时 A车间温度均值，折线图</button>
+        <button class="quick-btn" onclick="fillPrompt(this)">最近 7 天各车间温度最大值，柱状图对比</button>
+        <button class="quick-btn" onclick="fillPrompt(this)">过去 1 小时主回路电压趋势，面积图</button>
+      </div>
+
+      <div class="ai-parse-result" id="aiParseResult">
+        <div class="parse-card" id="parseCard">
+          <div class="parse-title">AI 解析结果 Parse Result</div>
+          <div class="parse-row"><span class="parse-key">Bucket</span><span class="parse-val" id="p-bucket">—</span></div>
+          <div class="parse-row"><span class="parse-key">Measurement</span><span class="parse-val" id="p-meas">—</span></div>
+          <div class="parse-row"><span class="parse-key">Field</span><span class="parse-val" id="p-field">—</span></div>
+          <div class="parse-row"><span class="parse-key">时间范围</span><span class="parse-val" id="p-range">—</span></div>
+          <div class="parse-row"><span class="parse-key">聚合函数</span><span class="parse-val" id="p-fn">—</span></div>
+          <div class="parse-row"><span class="parse-key">图表类型</span><span class="parse-val" id="p-chart">—</span></div>
+        </div>
+        <div class="flux-preview" id="fluxPreview">
+          <div class="flux-preview-title">自动生成 Flux 语句 Auto-generated</div>
+          <div class="flux-code" id="fluxCode"></div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-faint);text-align:center;padding:8px 0;display:none" id="editHint">
+          参数有误？可直接修改后重新执行
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- WORKBENCH -->
+  <main class="workbench">
+    <div class="condition-bar" id="condBar">
+      <span class="condition-label">Active query（当前查询）:</span>
+      <span class="cond-tag cond-bucket" id="cond-bucket" style="display:none"></span>
+      <span class="cond-tag cond-field" id="cond-field" style="display:none"></span>
+      <span class="cond-tag cond-time" id="cond-time" style="display:none"></span>
+      <span class="cond-tag cond-fn" id="cond-fn" style="display:none"></span>
+      <span class="cond-tag cond-ai" id="cond-ai" style="display:none">AI 生成</span>
+      <button onclick="toggleFluxDrawer()" id="fluxBtn" style="display:none;margin-left:auto;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;font-size:11px;color:var(--ink-muted);cursor:pointer">View Flux ↓（查看查询语句）</button>
+    </div>
+
+    <div class="chart-area" id="chartArea">
+      <div class="empty-state" id="emptyState">
+        
+        <div class="empty-title" id="emptyTitle">暂无查询</div>
+        <div class="empty-sub" id="emptySub">登录后，在左侧选择数据条件，点击 Run Query 开始可视化。</div>
+        <div class="empty-ai-hint" id="emptyAiHint" style="display:none">切换到 AI 模式，直接用自然语言描述你想要的数据 Describe your query</div>
+      </div>
+      <div class="chart-grid" id="chartGrid" style="display:none">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title" id="chartTitle1">temperature · sensor_data</div>
+              <div class="chart-meta" id="chartMeta1">Last 24h · mean/5m · 288 points</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="ai-generated-badge" id="aiBadge1" style="display:none">AI 生成</span>
+              <div class="chart-type-btns">
+                <button class="chart-type-btn active" onclick="switchType('main','line',this)">Line（折线）</button>
+                <button class="chart-type-btn" onclick="switchType('main','bar',this)">Bar（柱状）</button>
+                <button class="chart-type-btn" onclick="switchType('main','area',this)">Area（面积）</button>
+              </div>
+            </div>
+          </div>
+          <div class="chart-body tall"><canvas id="mainChart"></canvas></div>
+          <div class="chart-footer"><span>Min: 18.2°C</span><span>Avg: 24.6°C</span><span>Max: 31.8°C</span></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">humidity · sensor_data</div><div class="chart-meta">Last 24h · mean/5m</div></div>
+            <div class="chart-type-btns">
+              <button class="chart-type-btn active" onclick="switchType('sub1','line',this)">Line（折线）</button>
+              <button class="chart-type-btn" onclick="switchType('sub1','bar',this)">Bar（柱状）</button>
+            </div>
+          </div>
+          <div class="chart-body"><canvas id="sub1Chart"></canvas></div>
+          <div class="chart-footer"><span>Min: 42%</span><span>Avg: 61%</span><span>Max: 78%</span></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">pressure · sensor_data</div><div class="chart-meta">Last 24h · mean/5m</div></div>
+            <div class="chart-type-btns">
+              <button class="chart-type-btn active" onclick="switchType('sub2','bar',this)">Bar（柱状）</button>
+              <button class="chart-type-btn" onclick="switchType('sub2','line',this)">Line（折线）</button>
+            </div>
+          </div>
+          <div class="chart-body"><canvas id="sub2Chart"></canvas></div>
+          <div class="chart-footer"><span>Min: 1008 hPa</span><span>Avg: 1013 hPa</span><span>Max: 1021 hPa</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div><span class="status-dot" id="statusDot"></span><span id="statusText">未连接</span></div>
+      <span id="statusRight"></span>
+    </div>
+  </main>
+</div>
+
+<!-- FLUX DRAWER -->
+<div style="position:fixed;bottom:28px;left:var(--sidebar-w);right:0;height:160px;background:#0f172a;border-top:1px solid #334155;display:none;flex-direction:column;z-index:50" id="fluxDrawer">
+  <div style="padding:8px 14px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:11px;font-weight:500;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase">Generated Flux Query</span>
+    <button onclick="toggleFluxDrawer()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px">×</button>
+  </div>
+  <div style="flex:1;overflow:auto;padding:10px 14px;font-family:monospace;font-size:12px;color:#7dd3fc;line-height:1.7;white-space:pre" id="fluxDrawerBody"></div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-logo"><div class="modal-logo-dot"></div><span class="modal-logo-text">InfluxDB Query Builder（查询构建）</span></div>
+    <div class="modal-sub">登录一次，系统自动连接 <span>InfluxDB</span> 与 <span>Grafana</span>，无需分别配置。</div>
+    <div class="modal-field">
+      <label>InfluxDB URL</label>
+      <input type="text" id="inputUrl" placeholder="http://your-influxdb:8086" value="http://influxdb.demo:8086"/>
+    </div>
+    <div class="modal-field">
+      <label>Token</label>
+      <input type="password" id="inputToken" placeholder="输入你的 InfluxDB Token" value="demo-token-••••••••"/>
+    </div>
+    <button class="btn-modal-login" onclick="doLogin()">连接并登录</button>
+    <div class="modal-hint">Token 经加密传输，不存储在浏览器中。<br>Session 8 小时后自动过期。</div>
+  </div>
+</div>
+
+<div class="notif" id="notif"><span id="notifIcon"></span><span id="notifText"></span></div>
+
+<script>
+let loggedIn = false, charts = {}, currentMode = 'classic', fluxDrawerOpen = false, isAiQuery = false;
+
+const TREE_DATA = [
+  { id: 'b1', label: 'factory_sensors（工厂传感器）', type: 'bucket', icon: '🗄', children: [
+    { id: 'm1', label: 'workshop_A（A车间）', type: 'measurement', icon: '📊', children: [
+      { id: 'f1', label: 'temperature（温度）', type: 'field', icon: '⬡', children: [
+        { id: 't1', label: 'device = machine_01', type: 'tag', icon: '🏷' },
+        { id: 't2', label: 'device = machine_02', type: 'tag', icon: '🏷' },
+        { id: 't3', label: 'location = assembly_line（装配线）', type: 'tag', icon: '🏷' },
+      ]},
+      { id: 'f2', label: 'vibration（振动）', type: 'field', icon: '⬡', children: [
+        { id: 't4', label: 'device = machine_01', type: 'tag', icon: '🏷' },
+        { id: 't5', label: 'alert_level = warning（预警）', type: 'tag', icon: '🏷' },
+      ]},
+    ]},
+    { id: 'm2', label: 'workshop_B（B车间）', type: 'measurement', icon: '📊', children: [
+      { id: 'f3', label: 'temperature（温度）', type: 'field', icon: '⬡', children: [
+        { id: 't6', label: 'device = machine_03', type: 'tag', icon: '🏷' },
+        { id: 't7', label: 'device = machine_04', type: 'tag', icon: '🏷' },
+      ]},
+    ]},
+  ]},
+  { id: 'b2', label: 'energy_monitor（能耗监控）', type: 'bucket', icon: '🗄', children: [
+    { id: 'm3', label: 'power_usage（用电量）', type: 'measurement', icon: '📊', children: [
+      { id: 'f4', label: 'voltage（电压）', type: 'field', icon: '⬡', children: [
+        { id: 't8', label: 'phase = A相', type: 'tag', icon: '🏷' },
+        { id: 't9', label: 'phase = B相', type: 'tag', icon: '🏷' },
+        { id: 't10', label: 'circuit = main（主回路）', type: 'tag', icon: '🏷' },
+      ]},
+      { id: 'f5', label: 'current（电流）', type: 'field', icon: '⬡', children: [
+        { id: 't11', label: 'circuit = main（主回路）', type: 'tag', icon: '🏷' },
+        { id: 't12', label: 'circuit = backup（备用回路）', type: 'tag', icon: '🏷' },
+      ]},
+    ]},
+  ]},
+];
+
+const TYPE_COLORS = {
+  bucket: { bg: '#dbeafe', color: '#1d4ed8' },
+  measurement: { bg: '#d1fae5', color: '#065f46' },
+  field: { bg: '#fef3c7', color: '#92400e' },
+  tag: { bg: '#ede9fe', color: '#5b21b6' },
+};
+
+let expandedNodes = new Set(['b1','m1','b2']);
+
+function renderTree() {
+  const container = document.getElementById('dataTree');
+  if(!container) return;
+  container.innerHTML = '';
+  TREE_DATA.forEach(node => container.appendChild(createNode(node, 0)));
+}
+
+function createNode(node, level) {
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-node';
+  const hasChildren = node.children && node.children.length > 0;
+  const isExpanded = expandedNodes.has(node.id);
+
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+  row.style.marginLeft = level * 12 + 'px';
+  row.draggable = true;
+  row.dataset.label = node.label;
+  row.dataset.type = node.type;
+  row.dataset.nodeId = node.id;
+
+  const toggle = document.createElement('span');
+  toggle.className = 'tree-toggle';
+  toggle.textContent = hasChildren ? (isExpanded ? '▾' : '▸') : '';
+  if(hasChildren) toggle.onclick = (e) => { e.stopPropagation(); toggleNode(node.id, wrap); };
+
+  const icon = document.createElement('span');
+  icon.className = 'tree-icon';
+  icon.textContent = node.icon;
+
+  const label = document.createElement('span');
+  label.className = 'tree-label';
+  label.textContent = node.label;
+
+  const badge = document.createElement('span');
+  badge.className = 'tree-type type-' + node.type;
+  badge.textContent = node.type;
+
+  row.appendChild(toggle);
+  row.appendChild(icon);
+  row.appendChild(label);
+  row.appendChild(badge);
+
+  // drag events
+  row.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', node.label);
+    e.dataTransfer.setData('nodeType', node.type);
+    row.classList.add('dragging');
+  });
+  row.addEventListener('dragend', () => row.classList.remove('dragging'));
+
+  wrap.appendChild(row);
+
+  if(hasChildren) {
+    const childWrap = document.createElement('div');
+    childWrap.className = 'tree-children' + (isExpanded ? ' open' : '');
+    childWrap.id = 'children-' + node.id;
+    node.children.forEach(child => childWrap.appendChild(createNode(child, level + 1)));
+    wrap.appendChild(childWrap);
+  }
+  return wrap;
+}
+
+function toggleNode(id, wrap) {
+  const childWrap = document.getElementById('children-' + id);
+  if(!childWrap) return;
+  if(expandedNodes.has(id)) {
+    expandedNodes.delete(id);
+    childWrap.classList.remove('open');
+  } else {
+    expandedNodes.add(id);
+    childWrap.classList.add('open');
+  }
+  // update toggle icon
+  const toggle = wrap.querySelector('.tree-toggle');
+  if(toggle) toggle.textContent = expandedNodes.has(id) ? '▾' : '▸';
+}
+
+function initDragDrop() {
+  const zone = document.getElementById('tagZone');
+  if(!zone) return;
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const label = e.dataTransfer.getData('text/plain');
+    const type = e.dataTransfer.getData('nodeType');
+    if(!label) return;
+    addTagPill(label, type);
+  });
+}
+
+function addTagPill(label, type) {
+  const pills = document.getElementById('tagPills');
+  const c = TYPE_COLORS[type] || TYPE_COLORS.tag;
+  const pill = document.createElement('span');
+  pill.className = 'tag-pill';
+  pill.style.background = c.bg;
+  pill.style.color = c.color;
+  pill.innerHTML = label + ' <span class="tag-pill-remove" onclick="removeTag(this)">×</span>';
+  pills.appendChild(pill);
+}
+
+
+
+const DATA = {
+  'factory_sensors': {
+    measurements: {
+      'workshop_A（A车间）': ['temperature（温度）','vibration（振动）'],
+      'workshop_B（B车间）': ['temperature（温度）','humidity（湿度）'],
+    }
+  },
+  'energy_monitor': {
+    measurements: {
+      'power_usage（用电量）': ['voltage（电压）','current（电流）'],
+    }
+  },
+};
+
+const AI_PARSE = {
+  '过去 24 小时 A车间温度均值，折线图': { bucket:'sensor_data', meas:'environment', field:'temperature', range:'过去 24 小时', fn:'mean', chart:'折线图', fluxRange:'-24h', chartType:'line' },
+  '最近 7 天各车间温度最大值，柱状图对比': { bucket:'sensor_data', meas:'environment', field:'humidity', range:'最近 7 天', fn:'max', chart:'柱状图', fluxRange:'-7d', chartType:'bar' },
+  '过去 1 小时主回路电压趋势，面积图': { bucket:'sensor_data', meas:'environment', field:'pressure', range:'过去 1 小时', fn:'mean', chart:'面积图', fluxRange:'-1h', chartType:'area' },
+};
+
+function genData(n, base, amp, noise) {
+  return Array.from({length:n}, (_,i) => +(base + amp*Math.sin(i/n*Math.PI*3+1) + (Math.random()-.5)*noise).toFixed(2));
+}
+function genLabels(n, range) {
+  const now = Date.now();
+  const step = {'-1h':3600000/n,'-6h':21600000/n,'-24h':86400000/n,'-7d':604800000/n,'-30d':2592000000/n}[range]||300000;
+  return Array.from({length:n}, (_,i) => {
+    const d = new Date(now-(n-i)*step);
+    return (range==='-30d'||range==='-7d') ? d.toLocaleDateString('zh',{month:'short',day:'numeric'}) : d.toLocaleTimeString('zh',{hour:'2-digit',minute:'2-digit'});
+  });
+}
+
+function showNotif(text, icon='') {
+  const el = document.getElementById('notif');
+  document.getElementById('notifText').textContent = text;
+  document.getElementById('notifIcon').textContent = icon;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2800);
+}
+function setStatus(text, color='') {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (color ? ' '+color : '');
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  const isAi = mode === 'ai';
+  document.getElementById('classicBtn').classList.toggle('active', !isAi);
+  document.getElementById('aiBtn').classList.toggle('active', isAi);
+  document.getElementById('classicPanel').classList.toggle('hidden', isAi);
+  document.getElementById('aiPanel').classList.toggle('active', isAi);
+  document.getElementById('sidebar').classList.toggle('ai-mode', isAi);
+  document.getElementById('emptyAiHint').style.display = (!isAi && !document.getElementById('chartGrid').style.display==='grid') ? 'block' : 'none';
+
+  if (isAi) {
+    document.getElementById('emptyTitle').textContent = 'AI 查询模式';
+    document.getElementById('emptySub').textContent = '在左侧输入自然语言描述，AI 自动解析并生成 Flux 查询语句。';
+    document.getElementById('emptyAiHint').style.display = 'none';
+    document.getElementById('upgradeBanner').classList.remove('show');
+  } else {
+    document.getElementById('emptyTitle').textContent = '暂无查询';
+    document.getElementById('emptySub').textContent = '登录后，在左侧选择数据条件，点击 Run Query 开始可视化。';
+    document.getElementById('upgradeBanner').classList.add('show');
+  }
+}
+
+function openLogin() { document.getElementById('modalOverlay').classList.add('open'); }
+function overlayClick(e) { if(e.target===e.currentTarget) document.getElementById('modalOverlay').classList.remove('open'); }
+
+function doLogin() {
+  const url = document.getElementById('inputUrl').value;
+  if(!url) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+  setStatus('正在连接 InfluxDB…');
+  setTimeout(()=>{
+    loggedIn = true;
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('userChip').style.display = 'flex';
+    document.querySelectorAll('.field-select').forEach(s=>s.disabled=false);
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('aiInput').disabled = false;
+    document.getElementById('btnAiRun').disabled = false;
+    setStatus('已连接 · InfluxDB + Grafana', 'green');
+    document.getElementById('statusRight').textContent = url;
+    showNotif('连接成功 — InfluxDB & Grafana 就绪');
+    initDragDrop(); renderTree();
+  }, 900);
+}
+
+function onBucketChange() {
+  const bucket = document.getElementById('sel-bucket').value;
+  const mSel = document.getElementById('sel-measurement');
+  const fSel = document.getElementById('sel-field');
+  mSel.innerHTML = '<option value="">Select measurement...（选择测量表）</option>';
+  fSel.innerHTML = '<option value="">Select field...（选择字段）</option>';
+  if(!bucket||!DATA[bucket]) return;
+  Object.keys(DATA[bucket].measurements).forEach(m => { mSel.innerHTML += `<option value="${m}">${m}</option>`; });
+}
+function onMeasurementChange() {
+  const bucket = document.getElementById('sel-bucket').value;
+  const meas = document.getElementById('sel-measurement').value;
+  const fSel = document.getElementById('sel-field');
+  fSel.innerHTML = '<option value="">Select field...（选择字段）</option>';
+  if(!bucket||!meas) return;
+  (DATA[bucket]?.measurements[meas]||[]).forEach(f=>{ fSel.innerHTML += `<option value="${f}">${f}</option>`; });
+}
+function removeTag(el) { el.parentElement.remove(); }
+
+function runQuery() {
+  if(!loggedIn){openLogin();return;}
+  const bucket = document.getElementById('sel-bucket').value;
+  const field = document.getElementById('sel-field').value;
+  const range = document.getElementById('sel-range').value;
+  const fn = document.getElementById('sel-fn').value;
+  const win = document.getElementById('sel-window').value;
+  if(!bucket||!field){showNotif('请先选择 Bucket 和 Field','⚠️');return;}
+  isAiQuery = false;
+  const sp = document.getElementById('spinner');
+  sp.style.display='block';
+  document.getElementById('btnLabel').textContent='Running…';
+  document.getElementById('btnRun').disabled=true;
+  setStatus('执行查询中…');
+  setTimeout(()=>{
+    showResults(bucket, field, range, fn, win, 'classic');
+    sp.style.display='none';
+    document.getElementById('btnLabel').textContent='Run Query（执行查询）';
+    document.getElementById('btnRun').disabled=false;
+  }, 1200);
+}
+
+function fillPrompt(btn) {
+  document.getElementById('aiInput').value = btn.textContent;
+}
+
+function runAiQuery() {
+  if(!loggedIn){openLogin();return;}
+  const input = document.getElementById('aiInput').value.trim();
+  if(!input){showNotif('请输入查询描述','⚠️');return;}
+  isAiQuery = true;
+  const sp = document.getElementById('aiSpinner');
+  sp.style.display='block';
+  document.getElementById('aiBtn2Label').textContent='AI 解析中…';
+  document.getElementById('btnAiRun').disabled=true;
+  setStatus('AI 正在解析意图…', 'purple');
+
+  setTimeout(()=>{
+    const key = Object.keys(AI_PARSE).find(k => input.includes(k));
+    const parsed = key ? AI_PARSE[key] : {
+      bucket:'factory_sensors', meas:'workshop_A（A车间）',
+      field: input.includes('电压')||input.includes('voltage') ? 'voltage（电压）' :
+             input.includes('电流')||input.includes('current') ? 'current（电流）' :
+             input.includes('振动')||input.includes('vibration') ? 'vibration（振动）' : 'temperature（温度）',
+      range:'过去 24 小时', fn:'mean', chart:'折线图', fluxRange:'-24h', chartType:'line'
+    };
+    document.getElementById('p-bucket').textContent = parsed.bucket;
+    document.getElementById('p-meas').textContent = parsed.meas;
+    document.getElementById('p-field').textContent = parsed.field;
+    document.getElementById('p-range').textContent = parsed.range;
+    document.getElementById('p-fn').textContent = parsed.fn;
+    document.getElementById('p-chart').textContent = parsed.chart;
+    document.getElementById('parseCard').classList.add('show');
+    document.getElementById('fluxCode').textContent =
+`from(bucket: "${parsed.bucket}")
+  |> range(start: ${parsed.fluxRange})
+  |> filter(fn: (r) => r._measurement == "${parsed.meas}")
+  |> filter(fn: (r) => r._field == "${parsed.field}")
+  |> aggregateWindow(every: 5m, fn: ${parsed.fn}, createEmpty: false)
+  |> yield(name: "${parsed.fn}")`;
+    document.getElementById('fluxPreview').classList.add('show');
+    document.getElementById('editHint').style.display = 'block';
+    setStatus('解析完成，渲染图表中…', 'purple');
+
+    setTimeout(()=>{
+      showResults(parsed.bucket, parsed.field, parsed.fluxRange, parsed.fn, '5m', 'ai', parsed.chartType);
+      sp.style.display='none';
+      document.getElementById('aiBtn2Label').textContent='Generate & Run（生成并执行）';
+      document.getElementById('btnAiRun').disabled=false;
+    }, 600);
+  }, 1400);
+}
+
+function showResults(bucket, field, range, fn, win, source, chartType='line') {
+  document.getElementById('cond-bucket').textContent = bucket;
+  document.getElementById('cond-field').textContent = field;
+  document.getElementById('cond-time').textContent = range;
+  document.getElementById('cond-fn').textContent = fn+'/'+win;
+  ['cond-bucket','cond-field','cond-time','cond-fn'].forEach(id=>{ document.getElementById(id).style.display='inline-flex'; });
+  const isAi = source === 'ai';
+  document.getElementById('cond-ai').style.display = isAi ? 'inline-flex' : 'none';
+  document.getElementById('aiBadge1').style.display = isAi ? 'inline-flex' : 'none';
+  document.getElementById('fluxBtn').style.display = 'inline-flex';
+
+  document.getElementById('chartTitle1').textContent = field+' · '+bucket;
+  document.getElementById('chartMeta1').textContent = range+' · '+fn+'/'+win;
+
+  const tags = Array.from(document.querySelectorAll('#tagPills .tag-pill'))
+    .map(p=>'  |> filter(fn: (r) => r.'+p.textContent.trim().replace(' ×','').replace(' = ',' == "')+'")')
+    .join('\n');
+  document.getElementById('fluxDrawerBody').textContent =
+`from(bucket: "${bucket}")
+  |> range(start: ${range})
+  |> filter(fn: (r) => r._field == "${field}")
+${tags}
+  |> aggregateWindow(every: ${win}, fn: ${fn}, createEmpty: false)
+  |> yield(name: "${fn}")`;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('chartGrid').style.display = 'grid';
+  renderCharts(field, range, chartType);
+
+  setStatus('查询完成 · 288 行数据返回', isAi?'purple':'green');
+  document.getElementById('statusRight').textContent = new Date().toLocaleTimeString('zh');
+  showNotif(isAi ? 'AI 查询执行完成 — 288 行' : '查询执行完成 — 288 行');
+}
+
+const COLORS = {
+  blue:{line:'#0ea5e9',fill:'rgba(14,165,233,.12)'},
+  green:{line:'#10b981',fill:'rgba(16,185,129,.12)'},
+  orange:{line:'#f59e0b',fill:'rgba(245,158,11,.12)'},
+  purple:{line:'#8b5cf6',fill:'rgba(139,92,246,.12)'},
+};
+function makeDs(data, color, type, label) {
+  const c = COLORS[color];
+  if(type==='bar') return {label,data,backgroundColor:c.fill.replace('.12','.6'),borderColor:c.line,borderWidth:1,borderRadius:3};
+  return {label,data,borderColor:c.line,backgroundColor:type==='area'?c.fill:'transparent',fill:type==='area',tension:.35,pointRadius:0,borderWidth:2};
+}
+const baseOpts = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6,font:{size:10},color:'#94a3b8'}},y:{grid:{color:'#f1f5f9'},ticks:{font:{size:10},color:'#94a3b8'}}}};
+
+function renderCharts(field, range, chartType='line') {
+  const n=48, labels=genLabels(n,range);
+  if(charts.main) charts.main.destroy();
+  charts.main = new Chart(document.getElementById('mainChart'),{type:chartType==='area'?'line':chartType,options:baseOpts,data:{labels,datasets:[makeDs(genData(n,24,7,2),'blue',chartType,field)]}});
+  if(charts.sub1) charts.sub1.destroy();
+  charts.sub1 = new Chart(document.getElementById('sub1Chart'),{type:'line',options:baseOpts,data:{labels,datasets:[makeDs(genData(n,60,15,5),'green','line','humidity')]}});
+  if(charts.sub2) charts.sub2.destroy();
+  charts.sub2 = new Chart(document.getElementById('sub2Chart'),{type:'bar',options:baseOpts,data:{labels,datasets:[makeDs(genData(n,1013,8,3),'orange','bar','pressure')]}});
+}
+function switchType(key, type, btn) {
+  const map={main:'mainChart',sub1:'sub1Chart',sub2:'sub2Chart'};
+  btn.closest('.chart-type-btns').querySelectorAll('.chart-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const old=charts[key]; if(!old) return;
+  const {labels,datasets}=old.data; const d=datasets[0].data; const label=datasets[0].label;
+  const color=key==='main'?'blue':key==='sub1'?'green':'orange';
+  old.destroy();
+  charts[key]=new Chart(document.getElementById(map[key]),{type:type==='area'?'line':type,options:baseOpts,data:{labels,datasets:[makeDs(d,color,type,label)]}});
+}
+function toggleFluxDrawer() {
+  fluxDrawerOpen=!fluxDrawerOpen;
+  document.getElementById('fluxDrawer').style.display=fluxDrawerOpen?'flex':'none';
+  document.getElementById('fluxBtn').textContent=fluxDrawerOpen?'Hide Flux ↑':'View Flux ↓';
+}
+</script>
+</body>
+</html>

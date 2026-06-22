@@ -137,7 +137,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
 .cond-fn { background: #ede9fe; color: #5b21b6; }
 .cond-ai { background: var(--ai-light); color: var(--ai); }
 
-.chart-area { flex: 1; overflow-y: auto; padding: 16px; }
+.chart-area { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
 .chart-area::-webkit-scrollbar { width: 4px; }
 .chart-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
@@ -147,7 +147,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
 .empty-sub { font-size: 13px; max-width: 300px; line-height: 1.6; }
 .empty-ai-hint { margin-top: 8px; font-size: 12px; color: var(--ai); background: var(--ai-light); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--ai-mid); }
 
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chart-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 .chart-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 .chart-card.full { grid-column: 1 / -1; }
 .chart-header { padding: 10px 14px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -156,12 +156,18 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
 .chart-type-btns { display: flex; gap: 4px; flex-shrink: 0; }
 .chart-type-btn { padding: 3px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); background: transparent; color: var(--ink-muted); cursor: pointer; transition: all .12s; }
 .chart-type-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
-.chart-body { padding: 12px; position: relative; height: 200px; }
-.chart-body.tall { height: 260px; }
+.chart-body { padding: 12px; position: relative; height: 260px; }
+.chart-body.tall { height: 380px; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { background: var(--surface); color: var(--ink-muted); font-weight: 500; padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+.data-table td { padding: 6px 12px; border-bottom: 1px solid var(--border-light); color: var(--ink); }
+.data-table tr:hover td { background: var(--surface); }
+.data-table tr:last-child td { border-bottom: none; }
+.table-wrap { height: 100%; overflow-y: auto; }
 .chart-footer { padding: 6px 14px; border-top: 1px solid var(--border-light); font-size: 11px; color: var(--ink-faint); display: flex; justify-content: space-between; }
 
 /* AI badge on chart */
-.ai-generated-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; background: var(--ai-light); color: var(--ai); border-radius: 99px; border: 1px solid var(--ai-mid); }
+.ai-generated-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 3px 10px; background: var(--ai-light); color: var(--ai); border-radius: 6px; border: 1px solid var(--ai-mid); }
 
 /* STATUSBAR */
 .statusbar { height: 28px; background: var(--white); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11px; color: var(--ink-faint); flex-shrink: 0; }
@@ -194,8 +200,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
 .notif.show { display: flex; }
 
 /* UPGRADE BANNER */
-.upgrade-banner { background: linear-gradient(135deg, #ede9fe, #dbeafe); border: 1px solid var(--ai-mid); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--ai); line-height: 1.6; display: none; }
-.upgrade-banner.show { display: block; }
+
 .upgrade-banner strong { display: block; margin-bottom: 3px; font-size: 12px; }
 </style>
 </head>
@@ -234,10 +239,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
     <div class="classic-panel" id="classicPanel">
       <div class="sidebar-head">Query Builder（查询构建）</div>
       <div class="sidebar-body">
-        <div class="upgrade-banner" id="upgradeBanner">
-          <strong>AI Mode Upgrade（AI 模式升级点）</strong>
-          以下手动步骤在 AI 模式中可通过自然语言一句话完成。All manual steps below can be done with one sentence in AI mode.
-        </div>
+
         <div class="field-group">
           <div class="field-label">Bucket（数据源）</div>
           <select class="field-select" id="sel-bucket" onchange="onBucketChange()" disabled>
@@ -299,9 +301,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
           <div class="field-label" style="margin-bottom:5px">Data Tree（数据树）
             <span style="font-size:10px;color:var(--ink-faint);font-weight:400;margin-left:4px">↑ 拖拽节点至上方过滤区</span>
           </div>
-          <div style="font-size:11px;color:var(--ai);margin-bottom:8px;line-height:1.5;background:var(--ai-light);padding:6px 10px;border-radius:6px;border:1px solid var(--ai-mid)">
-            浏览数据结构，将字段或标签拖入上方过滤区——与下拉选择配合使用，快速添加过滤条件
-          </div>
+
           <div id="dataTree" style="max-height:180px;overflow-y:auto;padding-right:4px"></div>
         </div>
       </div>
@@ -330,6 +330,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
         <button class="quick-btn" onclick="fillPrompt(this)">过去 24 小时 A车间温度均值，折线图</button>
         <button class="quick-btn" onclick="fillPrompt(this)">最近 7 天各车间温度最大值，柱状图对比</button>
         <button class="quick-btn" onclick="fillPrompt(this)">过去 1 小时主回路电压趋势，面积图</button>
+        <button class="quick-btn" onclick="fillPrompt(this)">过去 24 小时 A车间温度数据，表格</button>
       </div>
 
       <div class="ai-parse-result" id="aiParseResult">
@@ -342,6 +343,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
           <div class="parse-row"><span class="parse-key">聚合函数</span><span class="parse-val" id="p-fn">—</span></div>
           <div class="parse-row"><span class="parse-key">图表类型</span><span class="parse-val" id="p-chart">—</span></div>
         </div>
+
         <div class="flux-preview" id="fluxPreview">
           <div class="flux-preview-title">自动生成 Flux 语句 Auto-generated</div>
           <div class="flux-code" id="fluxCode"></div>
@@ -362,7 +364,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
       <span class="cond-tag cond-time" id="cond-time" style="display:none"></span>
       <span class="cond-tag cond-fn" id="cond-fn" style="display:none"></span>
       <span class="cond-tag cond-ai" id="cond-ai" style="display:none">AI 生成</span>
-      <button onclick="toggleFluxDrawer()" id="fluxBtn" style="display:none;margin-left:auto;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;font-size:11px;color:var(--ink-muted);cursor:pointer">View Flux ↓（查看查询语句）</button>
+
     </div>
 
     <div class="chart-area" id="chartArea">
@@ -385,52 +387,38 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inte
                 <button class="chart-type-btn active" onclick="switchType('main','line',this)">Line（折线）</button>
                 <button class="chart-type-btn" onclick="switchType('main','bar',this)">Bar（柱状）</button>
                 <button class="chart-type-btn" onclick="switchType('main','area',this)">Area（面积）</button>
+              <button class="chart-type-btn" onclick="switchType('main','table',this)">Table（表格）</button>
               </div>
             </div>
           </div>
           <div class="chart-body tall"><canvas id="mainChart"></canvas></div>
           <div class="chart-footer"><span>Min: 18.2°C</span><span>Avg: 24.6°C</span><span>Max: 31.8°C</span></div>
         </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div><div class="chart-title">humidity · sensor_data</div><div class="chart-meta">Last 24h · mean/5m</div></div>
-            <div class="chart-type-btns">
-              <button class="chart-type-btn active" onclick="switchType('sub1','line',this)">Line（折线）</button>
-              <button class="chart-type-btn" onclick="switchType('sub1','bar',this)">Bar（柱状）</button>
-            </div>
-          </div>
-          <div class="chart-body"><canvas id="sub1Chart"></canvas></div>
-          <div class="chart-footer"><span>Min: 42%</span><span>Avg: 61%</span><span>Max: 78%</span></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div><div class="chart-title">pressure · sensor_data</div><div class="chart-meta">Last 24h · mean/5m</div></div>
-            <div class="chart-type-btns">
-              <button class="chart-type-btn active" onclick="switchType('sub2','bar',this)">Bar（柱状）</button>
-              <button class="chart-type-btn" onclick="switchType('sub2','line',this)">Line（折线）</button>
-            </div>
-          </div>
-          <div class="chart-body"><canvas id="sub2Chart"></canvas></div>
-          <div class="chart-footer"><span>Min: 1008 hPa</span><span>Avg: 1013 hPa</span><span>Max: 1021 hPa</span></div>
-        </div>
+
       </div>
+    </div>
+
+    <!-- Flux 固定区域 -->
+    <div id="fluxPanel" style="border-top:1px solid var(--sky-mid);background:#eff8ff;display:none;flex-direction:column;height:180px;flex-shrink:0">
+      <div style="padding:6px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;font-weight:500;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase">Flux Query（生成的查询语句）</span>
+        <button onclick="toggleFluxDrawer()" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:14px;line-height:1">×</button>
+      </div>
+      <div style="flex:1;overflow:auto;padding:8px 16px;font-family:'SF Mono',monospace;font-size:12px;color:#0369a1;line-height:1.7;white-space:pre;background:#e0f2fe;margin:8px 12px;border-radius:6px" id="fluxDrawerBody"></div>
     </div>
 
     <div class="statusbar">
       <div><span class="status-dot" id="statusDot"></span><span id="statusText">未连接</span></div>
-      <span id="statusRight"></span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="toggleFluxDrawer()" id="fluxBtn" style="display:none;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--white);font-size:11px;color:var(--ink-muted);cursor:pointer;font-weight:600">View Flux ↓</button>
+        <span id="statusRight"></span>
+      </div>
     </div>
   </main>
 </div>
 
 <!-- FLUX DRAWER -->
-<div style="position:fixed;bottom:28px;left:var(--sidebar-w);right:0;height:160px;background:#0f172a;border-top:1px solid #334155;display:none;flex-direction:column;z-index:50" id="fluxDrawer">
-  <div style="padding:8px 14px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:11px;font-weight:500;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase">Generated Flux Query</span>
-    <button onclick="toggleFluxDrawer()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:16px">×</button>
-  </div>
-  <div style="flex:1;overflow:auto;padding:10px 14px;font-family:monospace;font-size:12px;color:#7dd3fc;line-height:1.7;white-space:pre" id="fluxDrawerBody"></div>
-</div>
+
 
 <!-- LOGIN MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="overlayClick(event)">
@@ -658,17 +646,30 @@ function switchMode(mode) {
   document.getElementById('classicPanel').classList.toggle('hidden', isAi);
   document.getElementById('aiPanel').classList.toggle('active', isAi);
   document.getElementById('sidebar').classList.toggle('ai-mode', isAi);
+  document.querySelector('.sidebar-footer').style.display = isAi ? 'none' : 'block';
+  // 切换模式时清空图表
+  document.getElementById('chartGrid').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+  ['cond-bucket','cond-field','cond-time','cond-fn','cond-ai'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  document.getElementById('fluxBtn').style.display = 'none';
+  document.getElementById('fluxPanel').style.display = 'none';
+  document.getElementById('fluxBtn').style.display = 'none';
+  fluxDrawerOpen = false;
+  Object.values(charts).forEach(c => { if(c) c.destroy(); });
+  charts = {};
   document.getElementById('emptyAiHint').style.display = (!isAi && !document.getElementById('chartGrid').style.display==='grid') ? 'block' : 'none';
 
   if (isAi) {
     document.getElementById('emptyTitle').textContent = 'AI 查询模式';
     document.getElementById('emptySub').textContent = '在左侧输入自然语言描述，AI 自动解析并生成 Flux 查询语句。';
     document.getElementById('emptyAiHint').style.display = 'none';
-    document.getElementById('upgradeBanner').classList.remove('show');
+    
   } else {
     document.getElementById('emptyTitle').textContent = '暂无查询';
     document.getElementById('emptySub').textContent = '登录后，在左侧选择数据条件，点击 Run Query 开始可视化。';
-    document.getElementById('upgradeBanner').classList.add('show');
+    
   }
 }
 
@@ -753,12 +754,34 @@ function runAiQuery() {
 
   setTimeout(()=>{
     const key = Object.keys(AI_PARSE).find(k => input.includes(k));
-    const parsed = key ? AI_PARSE[key] : {
+    // 从输入里提取图表类型
+    const chartTypeFromInput = 
+      input.includes('柱状') ? 'bar' :
+      input.includes('面积') ? 'area' :
+      input.includes('表格') ? 'table' : 'line';
+    const chartLabelFromInput =
+      input.includes('柱状') ? '柱状图' :
+      input.includes('面积') ? '面积图' :
+      input.includes('表格') ? '表格' : '折线图';
+    const timeFromInput =
+      input.includes('1小时')||input.includes('1 小时') ? {range:'过去 1 小时', fluxRange:'-1h'} :
+      input.includes('6小时')||input.includes('6 小时') ? {range:'过去 6 小时', fluxRange:'-6h'} :
+      input.includes('7天')||input.includes('7 天') ? {range:'最近 7 天', fluxRange:'-7d'} :
+      input.includes('30天')||input.includes('30 天') ? {range:'最近 30 天', fluxRange:'-30d'} :
+      {range:'过去 24 小时', fluxRange:'-24h'};
+    const baseParsed = key ? {...AI_PARSE[key]} : {
       bucket:'factory_sensors', meas:'workshop_A（A车间）',
       field: input.includes('电压')||input.includes('voltage') ? 'voltage（电压）' :
              input.includes('电流')||input.includes('current') ? 'current（电流）' :
              input.includes('振动')||input.includes('vibration') ? 'vibration（振动）' : 'temperature（温度）',
       range:'过去 24 小时', fn:'mean', chart:'折线图', fluxRange:'-24h', chartType:'line'
+    };
+    // 用输入里提取的图表类型和时间范围覆盖
+    const parsed = {
+      ...baseParsed,
+      chartType: chartTypeFromInput,
+      chart: chartLabelFromInput,
+      ...timeFromInput
     };
     document.getElementById('p-bucket').textContent = parsed.bucket;
     document.getElementById('p-meas').textContent = parsed.meas;
@@ -767,6 +790,13 @@ function runAiQuery() {
     document.getElementById('p-fn').textContent = parsed.fn;
     document.getElementById('p-chart').textContent = parsed.chart;
     document.getElementById('parseCard').classList.add('show');
+    document.getElementById('fluxDrawerBody').textContent =
+`from(bucket: "${parsed.bucket}")
+  |> range(start: ${parsed.fluxRange})
+  |> filter(fn: (r) => r._measurement == "${parsed.meas}")
+  |> filter(fn: (r) => r._field == "${parsed.field}")
+  |> aggregateWindow(every: 5m, fn: ${parsed.fn}, createEmpty: false)
+  |> yield(name: "${parsed.fn}")`;
     document.getElementById('fluxCode').textContent =
 `from(bucket: "${parsed.bucket}")
   |> range(start: ${parsed.fluxRange})
@@ -774,12 +804,13 @@ function runAiQuery() {
   |> filter(fn: (r) => r._field == "${parsed.field}")
   |> aggregateWindow(every: 5m, fn: ${parsed.fn}, createEmpty: false)
   |> yield(name: "${parsed.fn}")`;
-    document.getElementById('fluxPreview').classList.add('show');
+    document.getElementById('fluxBtn').style.display = 'inline-block';
     document.getElementById('editHint').style.display = 'block';
     setStatus('解析完成，渲染图表中…', 'purple');
 
     setTimeout(()=>{
       showResults(parsed.bucket, parsed.field, parsed.fluxRange, parsed.fn, '5m', 'ai', parsed.chartType);
+      syncChartTypeBtns(parsed.chartType);
       sp.style.display='none';
       document.getElementById('aiBtn2Label').textContent='Generate & Run（生成并执行）';
       document.getElementById('btnAiRun').disabled=false;
@@ -796,7 +827,7 @@ function showResults(bucket, field, range, fn, win, source, chartType='line') {
   const isAi = source === 'ai';
   document.getElementById('cond-ai').style.display = isAi ? 'inline-flex' : 'none';
   document.getElementById('aiBadge1').style.display = isAi ? 'inline-flex' : 'none';
-  document.getElementById('fluxBtn').style.display = 'inline-flex';
+  document.getElementById('fluxBtn').style.display = 'inline-block';
 
   document.getElementById('chartTitle1').textContent = field+' · '+bucket;
   document.getElementById('chartMeta1').textContent = range+' · '+fn+'/'+win;
@@ -815,6 +846,7 @@ ${tags}
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('chartGrid').style.display = 'grid';
   renderCharts(field, range, chartType);
+  syncChartTypeBtns(chartType);
 
   setStatus('查询完成 · 288 行数据返回', isAi?'purple':'green');
   document.getElementById('statusRight').textContent = new Date().toLocaleTimeString('zh');
@@ -836,27 +868,97 @@ const baseOpts = {responsive:true,maintainAspectRatio:false,plugins:{legend:{dis
 
 function renderCharts(field, range, chartType='line') {
   const n=48, labels=genLabels(n,range);
+  const data = genData(n,24,7,2);
+  window._lastLabels = labels;
+  window._lastData = data;
+  window._lastField = field;
+
+  // 重置 canvas 显示
+  const canvas = document.getElementById('mainChart');
+  if(canvas) canvas.style.display = 'block';
+  const tableWrap = canvas ? canvas.parentElement.querySelector('.table-wrap') : null;
+  if(tableWrap) tableWrap.style.display = 'none';
+
+  if(chartType === 'table') {
+    if(charts.main) { charts.main.destroy(); charts.main = null; }
+    canvas.style.display = 'none';
+    let tableWrap = canvas.parentElement.querySelector('.table-wrap');
+    if(!tableWrap) {
+      tableWrap = document.createElement('div');
+      tableWrap.className = 'table-wrap';
+      canvas.parentElement.appendChild(tableWrap);
+    }
+    let rows = labels.map((l,i) => `<tr><td>${l}</td><td style="font-weight:500">${data[i]}</td><td style="color:var(--ink-muted)">${field}</td></tr>`).join('');
+    tableWrap.innerHTML = `<table class="data-table"><thead><tr><th>时间 Time</th><th>数值 Value</th><th>字段 Field</th></tr></thead><tbody>${rows}</tbody></table>`;
+    tableWrap.style.display = 'block';
+    return;
+  }
+
   if(charts.main) charts.main.destroy();
-  charts.main = new Chart(document.getElementById('mainChart'),{type:chartType==='area'?'line':chartType,options:baseOpts,data:{labels,datasets:[makeDs(genData(n,24,7,2),'blue',chartType,field)]}});
-  if(charts.sub1) charts.sub1.destroy();
-  charts.sub1 = new Chart(document.getElementById('sub1Chart'),{type:'line',options:baseOpts,data:{labels,datasets:[makeDs(genData(n,60,15,5),'green','line','humidity')]}});
-  if(charts.sub2) charts.sub2.destroy();
-  charts.sub2 = new Chart(document.getElementById('sub2Chart'),{type:'bar',options:baseOpts,data:{labels,datasets:[makeDs(genData(n,1013,8,3),'orange','bar','pressure')]}});
+  charts.main = new Chart(canvas,{type:chartType==='area'?'line':chartType,options:baseOpts,data:{labels,datasets:[makeDs(data,'blue',chartType,field)]}});
 }
 function switchType(key, type, btn) {
-  const map={main:'mainChart',sub1:'sub1Chart',sub2:'sub2Chart'};
+  const map={main:'mainChart'};
   btn.closest('.chart-type-btns').querySelectorAll('.chart-type-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const old=charts[key]; if(!old) return;
-  const {labels,datasets}=old.data; const d=datasets[0].data; const label=datasets[0].label;
-  const color=key==='main'?'blue':key==='sub1'?'green':'orange';
-  old.destroy();
-  charts[key]=new Chart(document.getElementById(map[key]),{type:type==='area'?'line':type,options:baseOpts,data:{labels,datasets:[makeDs(d,color,type,label)]}});
+
+  const canvas = document.getElementById(map[key]);
+  const chartBody = canvas ? canvas.parentElement : null;
+  if(!chartBody) return;
+
+  // 如果切换到 table
+  if(type === 'table') {
+    if(charts[key]) { charts[key].destroy(); charts[key]=null; }
+    canvas.style.display = 'none';
+    let tableWrap = chartBody.querySelector('.table-wrap');
+    if(!tableWrap) {
+      tableWrap = document.createElement('div');
+      tableWrap.className = 'table-wrap';
+      chartBody.appendChild(tableWrap);
+    }
+    // 生成表格数据
+    const lastLabels = window._lastLabels || [];
+    const lastData = window._lastData || [];
+    const lastField = window._lastField || 'value';
+    let rows = lastLabels.map((l,i) => `<tr><td>${l}</td><td style="font-weight:500">${lastData[i]}</td><td style="color:var(--ink-muted)">${lastField}</td></tr>`).join('');
+    tableWrap.innerHTML = `<table class="data-table">
+      <thead><tr><th>时间 Time</th><th>数值 Value</th><th>字段 Field</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    tableWrap.style.display = 'block';
+    return;
+  }
+
+  // 切回图表类型
+  const tableWrap = chartBody.querySelector('.table-wrap');
+  if(tableWrap) tableWrap.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const old=charts[key]; 
+  const labels = old ? old.data.labels : (window._lastLabels||[]);
+  const d = old ? old.data.datasets[0].data : (window._lastData||[]);
+  const label = old ? old.data.datasets[0].label : (window._lastField||'value');
+  if(old) old.destroy();
+  charts[key]=new Chart(canvas,{type:type==='area'?'line':type,options:baseOpts,data:{labels,datasets:[makeDs(d,'blue',type,label)]}});
 }
+function syncChartTypeBtns(chartType) {
+  const btns = document.querySelectorAll('.chart-type-btns .chart-type-btn');
+  btns.forEach(b => {
+    b.classList.remove('active');
+    const t = b.textContent.toLowerCase();
+    if(chartType === 'line' && t.includes('line')) b.classList.add('active');
+    else if(chartType === 'bar' && t.includes('bar')) b.classList.add('active');
+    else if(chartType === 'area' && t.includes('area')) b.classList.add('active');
+    else if(chartType === 'table' && t.includes('table')) b.classList.add('active');
+  });
+}
+
 function toggleFluxDrawer() {
   fluxDrawerOpen=!fluxDrawerOpen;
-  document.getElementById('fluxDrawer').style.display=fluxDrawerOpen?'flex':'none';
-  document.getElementById('fluxBtn').textContent=fluxDrawerOpen?'Hide Flux ↑':'View Flux ↓';
+  const panel=document.getElementById('fluxPanel');
+  panel.style.display=fluxDrawerOpen?'flex':'none';
+  const fb=document.getElementById('fluxBtn');
+  if(fb){ fb.textContent=fluxDrawerOpen?'Hide Flux ↑':'View Flux ↓'; fb.style.background='var(--white)'; }
 }
 </script>
 </body>

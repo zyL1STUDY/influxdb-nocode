@@ -18,7 +18,7 @@ InfluxDB 是工业级时序数据库，广泛用于 IoT 与运营监控场景。
 
 | 模块 | 说明 |
 |------|------|
-| ⚡ 交互 Demo | 可点击的产品演示，含传统模式与 AI 自然语言查询模式 |
+| ⚡ 交互 Demo](https://zyl1study.github.io/influxdb-nocode) | 可点击的产品演示，含传统模式与 AI 自然语言查询模式 |
 | 📄 [PRD](InfluxDB_PRD.pdf) | 需求文档，含用户分析、功能优先级、AI 升级路径 |
 | 📝 CHANGELOG | Demo 各版本修改记录与产品决策说明 |
 
